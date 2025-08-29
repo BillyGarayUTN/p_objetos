@@ -1,7 +1,10 @@
-{"level":"info","message":"⌛ Building environment","timeElapsed":205,"timestamp":"2025-08-29T18:09:26.835Z"}
-{"level":"info","message":"⌛ Building environment","timeElapsed":148,"timestamp":"2025-08-29T18:09:26.986Z"}
-{"level":"info","message":"⌛ Building environment","timeElapsed":105,"timestamp":"2025-08-29T18:09:27.108Z"}
-{"level":"info","message":"⌛ Validating ejemplo/example.wlk","timeElapsed":214,"timestamp":"2025-08-29T18:09:27.323Z"}
-{"level":"info","message":"⌛ Validating ejemplo/testExample.wtest","timeElapsed":151,"timestamp":"2025-08-29T18:09:27.585Z"}
-{"level":"info","message":"⌛ Validating ejemplo/example.wlk","timeElapsed":130,"timestamp":"2025-08-29T18:09:27.717Z"}
-{"level":"info","message":"⌛ Validating ejemplo/example.wlk","timeElapsed":159,"timestamp":"2025-08-29T18:13:46.761Z"}
+{"level":"info","message":"⌛ Building environment","timeElapsed":175,"timestamp":"2025-08-29T18:19:18.045Z"}
+{"level":"info","message":"⌛ Validating example.wlk","timeElapsed":173,"timestamp":"2025-08-29T18:19:18.386Z"}
+{"level":"info","message":"⌛ Validating testExample.wtest","timeElapsed":132,"timestamp":"2025-08-29T18:19:18.602Z"}
+{"level":"info","message":"⌛ Validating example.wlk","timeElapsed":123,"timestamp":"2025-08-29T18:19:18.725Z"}
+{"level":"info","message":"⌛ Validating example.wlk","timeElapsed":132,"timestamp":"2025-08-29T18:19:20.229Z"}
+{"level":"info","message":"⌛ Validating example.wlk","timeElapsed":126,"timestamp":"2025-08-29T18:19:20.996Z"}
+{"level":"info","message":"⌛ Building environment","timeElapsed":177,"timestamp":"2025-08-29T18:25:03.186Z"}
+{"level":"info","message":"⌛ Validating example.wlk","timeElapsed":161,"timestamp":"2025-08-29T18:25:03.509Z"}
+{"level":"info","message":"⌛ Validating testExample.wtest","timeElapsed":126,"timestamp":"2025-08-29T18:25:03.713Z"}
+{"level":"info","message":"⌛ Validating example.wlk","timeElapsed":117,"timestamp":"2025-08-29T18:25:03.831Z"}
