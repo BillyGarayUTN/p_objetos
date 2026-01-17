@@ -1,0 +1,149 @@
+import office.*
+
+describe "The Office - Test Suite Completo" {
+  // --- ESCENARIO INICIAL ---
+  const sucursalAlmagro = new Sucursal(presupuesto = 20000)
+  const sucursalCaballito = new Sucursal(presupuesto = 1000) // Pobre
+  // Cargos (Horas default = 4)
+  const recepcionista = new Recepcionista(horasTrabajadasPorDia = 4)
+  const pasanteEstudioso = new Pasante(
+    horasTrabajadasPorDia = 4,
+    diasDeEstudio = 2
+  ) // Labura 20 dias
+  const gerente = new Gerente(horasTrabajadasPorDia = 8, plus = 1000)
+  // Full time
+  const vice = new VicepresidenteJunior(horasTrabajadasPorDia = 8, plus = 1000)
+  // Empleados
+  const pam = new Empleado(
+    cargo = recepcionista,
+    antiguedad = 0,
+    sucursal = sucursalAlmagro
+  )
+  const ryan = new Empleado(
+    cargo = pasanteEstudioso,
+    antiguedad = 0,
+    sucursal = sucursalAlmagro
+  )
+  const michael = new Empleado(
+    cargo = gerente,
+    antiguedad = 10,
+    sucursal = sucursalAlmagro
+  ) // 10 años = +1000
+  const jan = new Empleado(
+    cargo = vice,
+    antiguedad = 0,
+    sucursal = sucursalAlmagro
+  )
+  // Relleno para Almagro (para tener gente)
+  const extra1 = new Empleado(
+    cargo = recepcionista,
+    antiguedad = 0,
+    sucursal = sucursalAlmagro
+  )
+  const extra2 = new Empleado(
+    cargo = recepcionista,
+    antiguedad = 0,
+    sucursal = sucursalAlmagro
+  )
+  
+  method initialize() {
+    sucursalAlmagro.empleados().add(pam)
+    sucursalAlmagro.empleados().add(ryan)
+    sucursalAlmagro.empleados().add(michael)
+    sucursalAlmagro.empleados().add(jan)
+    sucursalAlmagro.empleados().add(extra1)
+    sucursalAlmagro.empleados().add(extra2)
+    // Total en Almagro: 6 personas
+  }
+  
+  // --- PUNTO 1: SUELDOS --- 
+  test "1.1 Sueldo Recepcionista: 15 * 4hs * 22dias = 1320" {
+    assert.equals(1320, pam.sueldo())
+  }
+  
+  test "1.2 Sueldo Pasante: 10 * 4hs * (22-2)dias = 800" {
+    // 10 * 4 * 20 = 800
+    assert.equals(800, ryan.sueldo())
+  }
+  
+  test "1.3 Sueldo Gerente: (8 * 5 colegas) + 1000 plus = 1040/h -> * 8hs * 22dias + ant" {
+    // Colegas: 6 - 1 = 5.
+    // Base Hora: (8 * 5) + 1000 = 1040.
+    // Base Mes: 1040 * 8 * 22 = 183040.
+    // Antigüedad: 10 años * 100 = 1000.
+    // Total: 184040.
+    assert.equals(184040, michael.sueldo())
+  }
+  
+  test "1.4 Sueldo Vice: (Gerente * 1.03)" {
+    // Base Hora Gerente: 1040.
+    // Base Hora Vice: 1040 * 1.03 = 1071.2
+    // Base Mes: 1071.2 * 8 * 22 = 188531.2
+    assert.equals(188531.2, jan.sueldo())
+  }
+  
+  // --- PUNTO 2: VIABILIDAD ---
+  test "2.1 Sucursal Almagro gasta mucho pero tiene presupuesto alto" {
+    // Gastan un monton, pero le puse 20k de presupuesto... mmm, fallará?
+    // Michael solo gana 184k. Presupuesto 20k.
+    // 184040 > 20000 -> NO es viable.
+    assert.notThat(sucursalAlmagro.esViable())
+  }
+  
+  test "2.2 Sucursal Caballito sin empleados gasta 0, es viable" {
+    assert.that(sucursalCaballito.esViable())
+  }
+  
+  // --- PUNTO 3: TRANSFERENCIA ---
+  test "3.1 Transferencia EXITOSA: hay gente y hay plata (Caballito vacia pero viable)" {
+    // Caballito es viable (gasto 0 < 1000).
+    // Almagro tiene 6 personas ( > 3).
+    // Pam se muda.
+    sucursalAlmagro.trasnferirEmpleadoA(pam, sucursalCaballito)
+    
+    assert.equals(sucursalCaballito, pam.sucursal())
+    assert.that(sucursalCaballito.empleados().contains(pam))
+    assert.notThat(sucursalAlmagro.empleados().contains(pam))
+  }
+  
+  test "3.2 Transferencia FALLIDA: No hay plata en destino" {
+    // Michael gana 184k. Si lo paso a Caballito (presupuesto 1000), explota.
+    // Pero espera! La validación es "si la sucursal ES viable".
+    // Caballito actual (vacia) ES viable.
+    // Asi que Michael PASA.
+    // Y RECIEN AHI Caballito deja de ser viable.
+    // Probemos transferir a alguien a una sucursal YA fundida.
+    // Creamos sucursal fundida manual
+    const sucursalFundida = new Sucursal(presupuesto = 10)
+    sucursalFundida.empleados().add(
+      new Empleado(
+        cargo = recepcionista,
+        antiguedad = 0,
+        sucursal = sucursalFundida
+      )
+    )
+    // Gasto 1320 > 10 -> NO viable.
+    assert.throwsExceptionLike(
+      new NoHayPlata(),
+      { sucursalAlmagro.trasnferirEmpleadoA(pam, sucursalFundida) }
+    )
+  }
+  
+  test "3.3 Transferencia FALLIDA: Queda poca gente" {
+    // Vaciamos Almagro hasta que queden 3.
+    sucursalAlmagro.empleados().remove(pam)
+    sucursalAlmagro.empleados().remove(ryan)
+    sucursalAlmagro.empleados().remove(jan)
+    // Quedan 3: Michael, extra1, extra2.
+    // Intentamos sacar a Michael. Debería fallar porque quedarían 2.
+    assert.throwsExceptionLike(
+      new HayPocosEmpleados(),
+      { sucursalAlmagro.trasnferirEmpleadoA(michael, sucursalCaballito) }
+    )
+  }
+  
+  // --- BONUS: VALIDACION HORAS ---
+  test "4.1 No se puede crear cargo con 9 horas" {
+    assert.throwsException({ new Recepcionista(horasTrabajadasPorDia = 9) })
+  }
+}

@@ -1,36 +1,35 @@
-// Sistema Academia de Cocina
+// ============ ACADEMIA DE COCINA ============
+// Solución con POLIMORFISMO
 
 ///////////////  COCINERO ///////////////
 
 class Cocinero {
     const property nombre
-    var property nivel = new Principiante()
-    const property preparaciones = []
+    var property nivel = new Principiante()  // Todos empiezan como principiantes
+    const property preparaciones = []  // Lista de comidas preparadas
     
-    // PUNTO 1: Experiencia adquirida
+    // Experiencia total acumulada
     method experiencia() = preparaciones.sum { comida => comida.experienciaQueAporta() }
     
-    // PUNTO 2: Superó nivel de aprendizaje
-    method superoNivel() = nivel.superoNivel(self)
-    
-    // PUNTO 3: Preparar una comida
-    method preparar(receta) {
+    // Preparar una receta
+    method prepara(receta) {
+        // El nivel decide si puede preparar y con qué calidad
         if (!nivel.puedePreparar(receta, self)) {
-            throw new DomainException(message = "No puede preparar esta receta con su nivel actual")
+            throw new DomainException(message = nombre + " no puede preparar esta receta con su nivel actual")
         }
         
         const comida = nivel.prepararComida(receta, self)
         preparaciones.add(comida)
         
-        // Evaluar si pasa al siguiente nivel
-        if (self.superoNivel()) {
+        // Verificar si debe cambiar de nivel
+        if (nivel.superoNivel(self)) {
             nivel = nivel.siguienteNivel()
         }
         
         return comida
     }
     
-    // Métodos de apoyo para los niveles
+    // Métodos auxiliares para que los niveles consulten
     method comidasDificiles() = preparaciones.count { comida => comida.receta().esDificil() }
     
     method preparacionesSimilaresA(receta) = 
@@ -44,9 +43,10 @@ class Cocinero {
     override method toString() = nombre + " (Nivel: " + nivel.nombre() + ", Exp: " + self.experiencia() + ")"
 }
 
-///////////////  NIVELES DE APRENDIZAJE ///////////////
+///////////////  NIVELES DE APRENDIZAJE (POLIMORFISMO) ///////////////
 
 class Nivel {
+    // Interfaz polimórfica - cada nivel la implementa a su manera
     method puedePreparar(receta, cocinero)
     method prepararComida(receta, cocinero)
     method superoNivel(cocinero)
@@ -54,15 +54,19 @@ class Nivel {
     method nombre()
 }
 
+// ===== PRINCIPIANTE =====
 class Principiante inherits Nivel {
     
+    // Solo puede preparar recetas NO difíciles
     override method puedePreparar(receta, cocinero) = !receta.esDificil()
     
+    // Prepara comidas de calidad pobre o normal (nunca superior)
     override method prepararComida(receta, cocinero) {
-        const calidad = if (receta.ingredientes().size() < 4) "normal" else "pobre"
+        const calidad = if (receta.ingredientes().size() < 4) normal else pobre
         return new Comida(receta = receta, calidad = calidad)
     }
     
+    // Supera el nivel con más de 100 de experiencia
     override method superoNivel(cocinero) = cocinero.experiencia() > 100
     
     override method siguienteNivel() = new Experimentado()
@@ -70,28 +74,34 @@ class Principiante inherits Nivel {
     override method nombre() = "Principiante"
 }
 
+// ===== EXPERIMENTADO =====
 class Experimentado inherits Nivel {
     
+    // Puede preparar recetas NO difíciles, o difíciles si son similares a alguna que ya preparó
     override method puedePreparar(receta, cocinero) = 
         !receta.esDificil() || self.conoceRecetaSimilar(receta, cocinero)
     
     method conoceRecetaSimilar(receta, cocinero) = 
         cocinero.preparacionesSimilaresA(receta).size() > 0
     
+    // Puede preparar comidas de calidad normal o superior
     override method prepararComida(receta, cocinero) {
+        // Si perfeccionó la receta (tiene suficiente experiencia en similares), hace superior
         if (self.perfeccionoReceta(receta, cocinero)) {
             const plus = cocinero.cantidadComidasSimilaresA(receta) / 10
-            return new Comida(receta = receta, calidad = "superior", plus = plus)
+            return new Comida(receta = receta, calidad = superior, plus = plus)
         } else {
-            return new Comida(receta = receta, calidad = "normal")
+            return new Comida(receta = receta, calidad = normal)
         }
     }
     
+    // Perfeccionó si tiene 3 veces la experiencia base en recetas similares
     method perfeccionoReceta(receta, cocinero) {
         const experienciaRequerida = receta.experienciaBase() * 3
         return cocinero.experienciaEnRecetasSimilaresA(receta) >= experienciaRequerida
     }
     
+    // Supera el nivel con más de 5 comidas difíciles preparadas
     override method superoNivel(cocinero) = cocinero.comidasDificiles() > 5
     
     override method siguienteNivel() = new Chef()
@@ -99,11 +109,14 @@ class Experimentado inherits Nivel {
     override method nombre() = "Experimentado"
 }
 
+// ===== CHEF (NIVEL MÁXIMO) =====
 class Chef inherits Experimentado {
     
-    override method puedePreparar(receta, cocinero) = true  // Puede preparar cualquier receta
+    // Puede preparar CUALQUIER receta
+    override method puedePreparar(receta, cocinero) = true
     
-    override method superoNivel(cocinero) = false  // No se puede superar el nivel chef
+    // No se puede superar el nivel chef (es el máximo)
+    override method superoNivel(cocinero) = false
     
     override method siguienteNivel() {
         throw new DomainException(message = "Chef es el nivel máximo")
@@ -115,11 +128,14 @@ class Chef inherits Experimentado {
 ///////////////  RECETAS ///////////////
 
 class Receta {
-    const property ingredientes = []
-    const property dificultad
+    const property ingredientes = []  // Lista de ingredientes
+    const property dificultad  // Nivel de dificultad (número)
     
+    // Es difícil si tiene dificultad > 5 o más de 10 ingredientes
     method esDificil() = dificultad > 5 || ingredientes.size() > 10
     
+    // Dos recetas son similares si tienen los mismos ingredientes 
+    // o una dificultad de no más de 1 punto de diferencia
     method esSimilarA(otraReceta) = 
         self.mismoIngredientes(otraReceta) || self.dificultadSimilar(otraReceta)
     
@@ -129,69 +145,59 @@ class Receta {
     
     // Experiencia base que aporta la receta (sin considerar calidad)
     method experienciaBase() = ingredientes.size() * dificultad
-    
-    override method toString() = "Receta (Dif: " + dificultad + ", Ing: " + ingredientes.size() + ")"
-}
-
-// PUNTO 4: Recetas gourmet
-class RecetaGourmet inherits Receta {
-    
-    override method experienciaBase() = super() * 2  // Doble de experiencia
-    
-    override method esDificil() = true  // Siempre son difíciles
-    
-    override method toString() = "Receta Gourmet (Dif: " + dificultad + ", Ing: " + ingredientes.size() + ")"
 }
 
 ///////////////  COMIDAS PREPARADAS ///////////////
 
 class Comida {
     const property receta
-    const property calidad
-    var property plus = 0  // Para comidas superiores
+    const property calidad  // Objeto polimórfico: pobre, normal o superior
+    var property plus = 0   // Experiencia extra para comidas superiores
     
-    method experienciaQueAporta() {
-        return calidad match {
-            "pobre" => receta.experienciaBase().min(configuracion.experienciaMaximaPobre())
-            "normal" => receta.experienciaBase()
-            "superior" => receta.experienciaBase() + plus
-        }
-    }
-    
-    override method toString() = "Comida " + calidad + " (" + receta.toString() + ")"
+    method experienciaQueAporta() = calidad.experienciaQueAporta(receta, plus)
 }
 
-///////////////  CONFIGURACIÓN GLOBAL ///////////////
+///////////////  CALIDADES (OBJETOS POLIMÓRFICOS) ///////////////
 
-object configuracion {
-    var property experienciaMaximaPobre = 4  // Valor configurable
+object pobre {
+    method experienciaQueAporta(receta, plus) = receta.experienciaBase().min(4)
 }
 
-///////////////  ACADEMIA ///////////////
+object normal {
+    method experienciaQueAporta(receta, plus) = receta.experienciaBase()
+}
 
-// PUNTO 5: Academia de cocina
+object superior {
+    method experienciaQueAporta(receta, plus) = receta.experienciaBase() + plus
+}
+
+class RecetaGourmet inherits Receta {
+    // Las recetas gourmet son siempre difíciles
+    override method esDificil() = true
+
+    override method experienciaBase() = super() * 2
+
+}
+
 class Academia {
-    const property estudiantes = []
-    const property recetario = []
-    
+    var property estudiantes = []
+    var property recetario = []
+
+    // Entrenar a todos los estudiantes con sus mejores recetas
     method entrenar() {
         estudiantes.forEach { cocinero => self.entrenarCocinero(cocinero) }
     }
     
+    // Entrenar a un cocinero específico
     method entrenarCocinero(cocinero) {
         const recetaOptima = self.mejorRecetaPara(cocinero)
+        
         if (recetaOptima != null) {
-            try {
-                const comida = cocinero.preparar(recetaOptima)
-                console.println(cocinero.nombre() + " preparó: " + comida.toString())
-            } catch e : DomainException {
-                console.println(cocinero.nombre() + " no pudo preparar la receta óptima")
-            }
-        } else {
-            console.println(cocinero.nombre() + " no puede preparar ninguna receta")
+            cocinero.prepara(recetaOptima)
         }
     }
     
+    // Encontrar la receta que más experiencia aporta de las que puede preparar
     method mejorRecetaPara(cocinero) {
         const recetasDisponibles = recetario.filter { receta => 
             cocinero.nivel().puedePreparar(receta, cocinero) 
@@ -203,68 +209,7 @@ class Academia {
         
         return recetasDisponibles.max { receta => receta.experienciaBase() }
     }
-    
-    method agregarEstudiante(cocinero) {
-        estudiantes.add(cocinero)
-    }
-    
-    method agregarReceta(receta) {
-        recetario.add(receta)
-    }
-    
-    override method toString() = "Academia con " + estudiantes.size() + " estudiantes"
+
 }
 
-///////////////  FACTORY PARA FACILITAR CREACIÓN ///////////////
 
-object fabrica {
-    method crearCocinero(nombre) = new Cocinero(nombre = nombre)
-    
-    method crearReceta(ingredientes, dificultad) = 
-        new Receta(ingredientes = ingredientes, dificultad = dificultad)
-    
-    method crearRecetaGourmet(ingredientes, dificultad) = 
-        new RecetaGourmet(ingredientes = ingredientes, dificultad = dificultad)
-    
-    method crearAcademia() = new Academia()
-}
-
-///////////////  EJEMPLOS DE USO ///////////////
-
-object ejemplos {
-    
-    method cocineroBasico() {
-        const juan = fabrica.crearCocinero("Juan")
-        
-        // Recetas de ejemplo
-        const recetaFacil = fabrica.crearReceta(["tomate", "cebolla"], 2)
-        const recetaCompleja = fabrica.crearReceta(["carne", "verduras", "especias"], 4)
-        
-        // Juan prepara recetas
-        juan.preparar(recetaFacil)
-        juan.preparar(recetaCompleja)
-        
-        return juan
-    }
-    
-    method academiaCompleta() {
-        const academia = fabrica.crearAcademia()
-        
-        // Crear estudiantes
-        const maria = fabrica.crearCocinero("María")
-        const carlos = fabrica.crearCocinero("Carlos") 
-        const ana = fabrica.crearCocinero("Ana")
-        
-        academia.agregarEstudiante(maria)
-        academia.agregarEstudiante(carlos)
-        academia.agregarEstudiante(ana)
-        
-        // Agregar recetas al recetario
-        academia.agregarReceta(fabrica.crearReceta(["sal", "pimienta"], 1))
-        academia.agregarReceta(fabrica.crearReceta(["tomate", "cebolla", "ajo"], 3))
-        academia.agregarReceta(fabrica.crearReceta(["pasta", "salsa", "queso", "albahaca"], 4))
-        academia.agregarReceta(fabrica.crearRecetaGourmet(["trufa", "caviar"], 8))
-        
-        return academia
-    }
-}

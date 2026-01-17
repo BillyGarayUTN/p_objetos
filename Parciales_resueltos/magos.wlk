@@ -1,77 +1,102 @@
-////////////////////  Torneo de Magos /////////////////////
 class Mago{
     var property nombre
-    var property resistenciaMagica  
-    var property energiaMagica 
-    var property reserva
 
-    var property poderInato  // 1 al 10
+    var property resistencia
 
-    method poderInato(nuevoPoder) {
-    if(!self.esPoderValido(nuevoPoder)) {
-        self.error("El poder innato debe estar entre 1 y 10, recibido: " + nuevoPoder)
+    var property energiaMagica
+
+    var property poderInato
+    
+    method initialize() { // cuando se crea el objeto
+        if(!self.esPoderValido(poderInato)) {
+            self.error("El poder innato debe estar entre 1 y 10, recibido: " + poderInato)
+        }
     }
-    poderInato = nuevoPoder
-    }
-
+    
     method esPoderValido(poder) = poder.between(1, 10)
+
+    method poderInato(nuevoPoder) {  // para las modificaciones posteriores
+        if(!self.esPoderValido(nuevoPoder)) {
+            self.error("El poder innato debe estar entre 1 y 10, recibido: " + nuevoPoder)
+        }
+        poderInato = nuevoPoder
+    }
 
     var property objetosMagicos = []
 
-    method poderTotal() = self.objetosMagicos().sum{un=>un.poder(self)} * self.poderInato()
+    method poderTotal() = objetosMagicos.sum{un=>un.poder(self) } * poderInato
 
-    method desafiar(oponente) {
-        if(oponente.esVencidoPor(self)) {
-            // El mago ganador obtiene la energía mágica del perdedor
-            energiaMagica = energiaMagica + oponente.energiaMagica()
-            oponente.pierdePorDerrota()
+    method desafiaA(enemigo){ 
+        if(enemigo.esVencidoPor(self)){
+            const energiaRobada = enemigo.energiaQuePierde()
+            enemigo.pierdePorDerrota()
+            self.ganaPuntos(energiaRobada)
         }
     }
 
-    method esVencidoPor(oponente)
+    method ganaPuntos(energia) { 
+        energiaMagica = energiaMagica + energia
+    }
 
-    method pierdePorDerrota(){}
+    method pierdePorDerrota()
+    
+    method esVencidoPor(atacante)
+    
+    method energiaQuePierde()
 
-    // Para el punto 3: un mago es su propio líder
     method lider() = self
 }
 
-class Aprendices inherits Mago{
+class Aprendis inherits Mago{
 
-    override method esVencidoPor(enemigo) = self.resistenciaMagica() < enemigo.poderTotal()  
+    override method esVencidoPor(atacante) = resistencia < atacante.poderTotal()
 
-    override method pierdePorDerrota() { energiaMagica = energiaMagica / 2 }
+    override method energiaQuePierde() = energiaMagica / 2
+
+    override method pierdePorDerrota() {
+        energiaMagica = energiaMagica / 2
+    }
 }
 
-class Vetenaro inherits Mago{
+class Veterano inherits Mago{
 
-    override method esVencidoPor(enemigo) = self.energiaMagica() * 1.5 < enemigo.poderTotal() 
+    override method esVencidoPor(atacante) = atacante.poderTotal() >= resistencia * 1.5
 
-    override method pierdePorDerrota()  { resistenciaMagica = resistenciaMagica / 4 }
+    override method energiaQuePierde() = energiaMagica / 4
+
+    override method pierdePorDerrota() {
+        energiaMagica = energiaMagica / 4
+    }
 }
 
 class Inmortales inherits Mago{
-
-    override method esVencidoPor(enemigo) = false 
-
-    override method pierdePorDerrota() {} // Los inmortales no pierden nada
-
+    
+    override method esVencidoPor(atacante) = false
+    
+    override method energiaQuePierde() = 0
+    
+    override method pierdePorDerrota() {
+        // No pierde nada porque no puede ser vencido
+    }
 }
 
 class ObjetoMagico{
-    var property valorBase
+
     method poder(mago)
 }
 
-
 class Varita inherits ObjetoMagico{
 
-    override method poder(mago) = if (mago.nombre().length().even()) valorBase*1.5  else valorBase
+    var property poderBase
+
+    override method poder(mago) = if(mago.nombre().length().even()) poderBase*1.5 else poderBase
 }
 
 class Tunica inherits ObjetoMagico{
 
-    override method poder(mago) = mago.resistenciaMagica()*2 + valorBase
+    method resistenciaMagicaDe(mago)= mago.resistencia()
+
+    override method poder(mago) = self.resistenciaMagicaDe(mago) * 2
 }
 
 class TunicaEpica inherits Tunica{
@@ -79,98 +104,66 @@ class TunicaEpica inherits Tunica{
     override method poder(mago) = super(mago) + 10
 }
 
-class Amuletos inherits ObjetoMagico(valorBase = 0){
+class Amuleto inherits ObjetoMagico{
 
-    override method poder(mago) = 200
+    override method poder(mago) = 200 
 }
 
 class Ojota inherits ObjetoMagico{
 
-    override method poder(mago) = mago.nombre().length() * 10
+    override method poder(mago) = mago.nombre().length() * 10 
 }
 
-class GremioMagos{
-
+class Gremio{
+    
     var property miembros = []
 
-    // PUNTO 1: Constructor que valida mínimo 2 miembros
-    method initialize(listaDeMiembros) {
-        self.validarCantidadMinima(listaDeMiembros)
-        miembros = listaDeMiembros
-    }
-
-    method validarCantidadMinima(listaMagos) {
-        if(listaMagos.size() < 2) {
-            self.error("Un gremio debe tener al menos 2 miembros")
+    method initialize() { // para que haya almenos 2 magos
+        if(miembros.size() < 2) {
+            self.error("Un gremio debe tener al menos 2 miembros, recibidos: " + miembros.size())
         }
     }
-
-    // Métodos básicos del gremio
-    method poderTotal() = miembros.sum{miembro => miembro.poderTotal()}
-
-    method reserva() = miembros.sum{miembro => miembro.reserva()}
-
-    method cantidadMiembros() = miembros.size()
-
-    // Método para agregar miembros después de la creación
-    method agregarMiembro(nuevoMiembro) {
-        miembros.add(nuevoMiembro)
-    }
-
-    // Método para quitar miembros (validando que no queden menos de 2)
-    method quitarMiembro(miembro) {
-        if(miembros.size() <= 2) {
-            self.error("No se puede quitar el miembro. El gremio quedaría con menos de 2 miembros")
-        }
-        miembros.remove(miembro)
-    }
-
-    // Verificar si un mago pertenece al gremio
-    method tieneMiembro(mago) = miembros.contains(mago)
-
-    // ● El líder del gremio es el miembro con mayor poder total
-    // Si el más poderoso es un gremio, el líder es el líder de ese gremio
+    
     method lider() {
-        const miembroMasPoderoso = miembros.max{miembro => miembro.poderTotal()}
-        return miembroMasPoderoso.lider()
+        const miembroMasPoderoso = miembros.max{un=>un.poderTotal()}
+        return miembroMasPoderoso.lider()  // Si es gremio, devuelve su líder; si es mago, se devuelve a sí mismo
     }
+    
+    method poderTotal() = miembros.sum{un=>un.poderTotal()}
 
-    // ● Resistencia mágica total del gremio
-    method resistenciaMagica() = miembros.sum{miembro => miembro.resistenciaMagica()}
+    method energiaMagica() = miembros.sum{un=>un.energiaMagica()}
 
-    // ● Para vencer a un gremio: poder atacante > (resistencia total + resistencia líder)
-    method resistenciaParaVencer() = self.resistenciaMagica() + self.lider().resistenciaMagica()
-
-    // ● Condición para ser vencido por otro
-    method esVencidoPor(atacante) = self.resistenciaParaVencer() < atacante.poderTotal()
-
-    // ● Los gremios pueden desafiar a otros magos o gremios
-    method desafiar(oponente) {
-        if(oponente.esVencidoPor(self)) {
-            // Los puntos de energía mágica van a la reserva del líder del gremio
-            const energiaObtenida = oponente.energiaMagica()
-            self.lider().reserva(self.lider().reserva() + energiaObtenida)
-            oponente.pierdePorDerrota()
+    method desafiaA(entidadEnemiga) {
+        if(entidadEnemiga.esVencidoPor(self)){
+            const energiaRobada = entidadEnemiga.energiaQuePierde()
+            entidadEnemiga.pierdePorDerrota()
+            self.lider().ganaPuntos(energiaRobada)
         }
     }
 
-    // ● Al perder, cada mago pierde como si fuera individual
+    method resistenciaGremio() = miembros.sum{un=>un.resistencia()}
+    
+    method resistencia() = self.resistenciaGremio()  // Para que un gremio pueda ser miembro de otro gremio
+
+    method esVencidoPor(enemigo) = enemigo.poderTotal() > (self.resistenciaGremio() + self.lider().resistencia())
+
+    method energiaQuePierde() = self.energiaMagica()
+
     method pierdePorDerrota() {
-        miembros.forEach{miembro => miembro.pierdePorDerrota()}
-    }
-
-    // Energía mágica total del gremio
-    method energiaMagica() = miembros.sum{miembro => miembro.energiaMagica()}
-
-}
-
-// Factory para crear gremios con validación
-object gremioFactory {
-    
-    method crearGremio(listaDeMagos) {
-        const nuevoGremio = new GremioMagos()
-        nuevoGremio.initialize(listaDeMagos)
-        return nuevoGremio
+        miembros.forEach{un=>un.pierdePorDerrota()}
     }
     
+    method ganaPuntos(energia) {
+        self.lider().ganaPuntos(energia)  // Delega al líder real (que siempre es un mago)
+    }
 }
+
+    
+
+
+
+
+
+
+
+

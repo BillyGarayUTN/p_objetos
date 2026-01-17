@@ -45,7 +45,7 @@ class PizzaCompuesta inherits Pizza {
     }
     
     // No puede tener más pizzas que porciones disponibles
-    method puedeAgregarPizza(pizza) = 
+    override method puedeAgregarPizza(pizza) = 
         pizzasComponentes.size() < self.porciones()
     
     method agregarPizza(pizza) {

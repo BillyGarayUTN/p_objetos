@@ -1,139 +1,99 @@
 class Mounstro{
+    var property objetosParaSerAtrapado = []
 
-    var property objetosParaSerAtrapado  = []
+    method daniaA(cazador){}
 
-    var property objetosPersonales = []
-
-    method puedeSerAtrapadoPor(cazador) =
-        objetosParaSerAtrapado.all{unObjeto=>cazador.objetos().contains(unObjeto)}
-
-    method esAfectadoPor(cazador){}
-    
-}
-                                                        // #{"hierro","sal"}
-class Banshee inherits Mounstro(objetosParaSerAtrapado=["hierro","sal"]){
-
-    override method esAfectadoPor(cazador){
-        cazador.pierdeObjetos()
-    }
 }
 
-class Curupi inherits Mounstro{
+class Banshee inherits Mounstro{
+    override method daniaA(cazador) = cazador.pierdeTodosObjetos()
+}
 
-    override method esAfectadoPor(cazador){
-        cazador.destrezaALaMitad()
-    }
+class Curupi  inherits Mounstro{
+    override method daniaA(cazador) = cazador.destrezaALaMitad() 
 }
 
 class LuzMala inherits Mounstro{
-
-    override method esAfectadoPor(cazador){
-        cazador.reduceDestreza()
-    }
+    override method daniaA(cazador) = cazador.reduceDestrezaSegunCantObjetos()
 }
 
 class Djinn inherits Mounstro{
-
-    override method esAfectadoPor(cazador){
-        cazador.liberarUltimoMounstro()
-    }
+    override method daniaA(cazador) = cazador.liberaUltimoMounstro()
 }
 
 class Cazador{
+    var property mounstrosCazados = []
+    var property objetosObtenidos = []
+    var property nivelDestreza
 
-    var property nivelDestreza  = 0 // no puede ser cero
-
-    method nivelDestreza(unValor) {
-        if (unValor < 0) {
-            nivelDestreza = 0
-        } else {
-            nivelDestreza = unValor
+    method gana(mounstro) = 
+        if(self.tieneTodosLosObjetos(mounstro)){
+            mounstrosCazados.add(mounstro)
+        }else {
+            mounstro.daniaA(self)
         }
+
+    method tieneTodosLosObjetos(mounstro) = 
+        mounstro.objetosParaSerAtrapado().all { obj => objetosObtenidos.contains(obj) }
+
+    method pierdeTodosObjetos() { self.objetosObtenidos().clear() }
+
+    method destrezaALaMitad() { nivelDestreza = nivelDestreza / 2}
+
+    method reduceDestrezaSegunCantObjetos() { nivelDestreza = (nivelDestreza - objetosObtenidos.size()).max(0) }
+
+    method liberaUltimoMounstro() { 
+        mounstrosCazados.remove(mounstrosCazados.last()) 
+        nivelDestreza = nivelDestreza + 1 }
+
+    method investiga(caso) = caso.esInvestigadoPor(self)
+
+    method agregaPuntosDestreza(puntos) {
+        nivelDestreza = nivelDestreza + puntos} 
+
+    method liberaUltimoObjeto() { 
+        objetosObtenidos.remove(objetosObtenidos.last())}
+
+    method agregarObjeto(objeto) {
+        objetosObtenidos.add(objeto)}
+
+    // Métodos para el concurso
+    method cantidadMonstruosCazados() = mounstrosCazados.size()
+
+    method monstruoMasJodido() {
+        if (mounstrosCazados.isEmpty()) {
+            throw new Exception(message = "No ha cazado ningún monstruo")
+        }
+        return mounstrosCazados.max { monstruo => monstruo.objetosParaSerAtrapado().size() }
     }
 
-    var property mounstroCazado = []
-
-    var property objetos = []
-
-    method cazar(mounstro){
-        if(mounstro.puedeSerAtrapadoPor(self)){
-            mounstroCazado.add(mounstro)
-        }else{
-            mounstro.esAfectadoPor(self)
-        }   
-    }
-
-    method debeInvestigar(caso){
-        caso.investigar(self)
-    }
-
-
-    method quitarUltimoObjeto(){
-        objetos.removeLast()
-    }
-
-    method agregarObjeto(unObjeto){
-        objetos.add(unObjeto)
-    }
-
-
-    method pierdeObjetos(){
-        self.objetos().clear()
-    }
-
-    method destrezaALaMitad(){
-        self.nivelDestreza(self.nivelDestreza() / 2)
-    }
-
-    method reduceDestreza(){
-        self.nivelDestreza(self.nivelDestreza() - self.objetos().size())
-    }
-
-    method liberarUltimoMounstro(){
-        mounstroCazado.removeLast()
-        nivelDestreza += 1
-    }
-
-    method agregarNivelDestreza(unNivel){
-        nivelDestreza += unNivel
-    }
+    method cantidadMonstruosDeUnObjeto() = 
+        mounstrosCazados.count { monstruo => monstruo.objetosParaSerAtrapado().size() == 1 }
 
     method cumple(criterioAceptacion) =
         criterioAceptacion.apply(self)
         // cazador=>cazador.mounstroCazado() >= 10
 
-    method destrezaSuperior()= self.nivelDestreza() > 1000
-    
+    method destrezaSuperior() = nivelDestreza >1000
 }
 
-//////////////////////////   CASOS  ////////////////////////
+// Casos //
 
 class Crimen{
-    const objeto
+    var property objetoExpuesto
 
-    method investigar(cazador){
-        cazador.agregarObjeto(objeto)
-    }
+    method esInvestigadoPor(cazador) = cazador.agregarObjeto(objetoExpuesto)
 }
 
 class Trampa{
-    
-    method investigar(cazador){
-        cazador.quitarUltimoObjeto()
-    }
+    method esInvestigadoPor(cazador) = cazador.liberaUltimoObjeto()
 }
 
 class Avistaje{
-    const puntosExtra
+    var property puntosExtra
 
-    method investigar(cazador){
-        cazador.agregarNivelDestreza(puntosExtra)
-    }
+    method esInvestigadoPor(cazador) = cazador.agregaPuntosDestreza(puntosExtra)  
 }
-
-
-
-//////////////////////////   CONCURSO  ////////////////////////
 
 class Concurso{
 
@@ -156,8 +116,6 @@ class Concurso{
         }
     }
 
-    
-
 }
 
 // criterios de valoracion
@@ -171,28 +129,9 @@ const criterioDeCantidadMounstro = {cazador=>cazador.mounstroCazado() >= 10 }
 const concursoElRamboGuarani = new Concurso(   
     criterioValoracion= criterioDeMayorCazadoresMounstros,
     criterioAceptacion= criterioDeCantidadMounstro)
-    
 
-// Punto 5 //
+// punto  5
 
 class Kraken inherits Mounstro{
-
-    override method puedeSerAtrapadoPor(cazador) = super(cazador) && cazador.destrezaSuperior()
+    override method daniaA(cazador) = super(cazador) && cazador.destrezaSuperior()
 }
-
-/*
-class Mounstro{
-
-    var property objetosParaSerAtrapado  = []
-
-    var property objetosPersonales = []
-
-    method puedeSerAtrapadoPor(cazador) =
-        objetosParaSerAtrapado.all{unObjeto=>cazador.objetos().contains(unObjeto)}
-
-    method esAfectadoPor(cazador){}
-    
-}
-
-
-*/

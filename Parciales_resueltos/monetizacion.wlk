@@ -158,7 +158,8 @@ object plataforma {
 
 
     // 2 c
-    method superUsuarios() = usuarios.count{un=>un.contenidosPopulares()}
+    // Cantidad de usuarios que tienen 10 o más contenidos populares
+    method superUsuarios() = usuarios.count{un => un.contenidosPopulares().size() >= 10}
 }
 /*
 Respuesta al Punto 5:

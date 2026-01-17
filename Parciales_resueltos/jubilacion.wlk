@@ -1,169 +1,103 @@
-const todosLosLenguajes = ["COBOL", "FORTRAN", "Pascal", "Python", "Ruby", "JavaScript"]
-const lengAntiguo = ["COBOL", "FORTRAN", "Pascal"]
-const lengModerno = todosLosLenguajes.filter { l => !lengAntiguo.contains(l) }
+class NoEstaInvitado inherits Exception{}
 
-// --- Clase base común ---
-class Empleado {
-    var property programaEn = []
+const lenguajesModernos = ["wollok", "kotlin", "typescript"]
+const lenguajesAntiguos = ["cobol", "smalltalk", "pascal", "fortran"]
 
-    var property esCopado = false
 
-    method esInvitado() = self.esCopado()  // punto 3
+class Organizador{
+    var property empresa
 
-    // aprender lenguaje (evita duplicados)  // punto 2
-    method aprender(lenguaje) {
-    if (!programaEn.contains(lenguaje)) { self.programaEn().add(lenguaje) }
-    }
-    
-    // Contar lenguajes modernos que conoce
-    method cantidadLenguajesModernos() = programaEn.count { l => lengModerno.contains(l) }
-    
-    // Número de mesa (por defecto igual a lenguajes modernos)
-    method numeroMesa() = self.cantidadLenguajesModernos()
-    
-    // Monto del regalo
-    method montoRegalo() = 1000 * self.cantidadLenguajesModernos()
+    method listaInvitados() = empresa.empleados().filter{uno=>uno.estaInvitado()}
 }
 
-// --- Desarrollador ---
-class Desarrollador inherits Empleado {
-
-    method conoceLenguajeAntiguo() = programaEn.any { l => lengAntiguo.contains(l) }
-    method conoceLenguajeModerno() = programaEn.any { l => lengModerno.contains(l) }
-
-    override method esCopado() = self.conoceLenguajeAntiguo() && self.conoceLenguajeModerno()
-
-    override method esInvitado() =
-    super() || programaEn.contains("Wollok") || self.conoceLenguajeAntiguo()
-}
-
-// --- Infraestructura ---
-class Infra inherits Empleado {
-    const experiencia = 0
-
-    override method esCopado() = experiencia > 10
-
-    override method esInvitado() = super() || programaEn.size() >= 5
-}
-
-// --- Jefe ---
-class Jefe inherits Empleado {
-    var property aCargo = []
-
-    method conoceLenguajeAntiguo() = programaEn.any { l => lengAntiguo.contains(l) }
-    method genteCopada() = aCargo.all { p => p.esCopado() }
-
-    override method esInvitado() = super() || (self.conoceLenguajeAntiguo() && self.genteCopada())
-
-    // Punto 1: tomar a cargo (sin duplicar; usa getter para encapsular)
-    method tomarACargo(empleado) {
-    if (!self.aCargo().contains(empleado)) { self.aCargo().add(empleado) }
-    }
-    
-    // Los jefes van a la mesa 99
-    override method numeroMesa() = 99
-    
-    // Los jefes regalan $1000 por lenguaje moderno + $1000 por empleado a cargo
-    override method montoRegalo() = super() + (1000 * aCargo.size()) 
-}
-
-// --- Juan ---
-object juan {
-
-    method invita(persona) = persona.esInvitado()
-
-    method  listaDeInvitados(empresa) = empresa.empleados().filter { unEmpl => self.invita(unEmpl) }
-}
-
-class Empresa{
+object empresa{
     var property empleados = []
 }
+class Persona{
 
-//////////////   Parte 2: La Fiesta   //////////////
-object fiesta {
-    const organizador = juan
-    var property empresa = null
-    const property costoFijo = 200000
-    var property asistentes = []
-    var property registroAsistencia = []  // Lista de objetos {empleado, mesa}
+    var property lenguajesConoce = []
     
-    // Obtener lista de invitados
-    method listaDeInvitados() = organizador.listaDeInvitados(empresa)
+    method estaInvitado() = self.esCopado()
     
-    // Verificar si una persona está en la lista de invitados
-    method estaInvitado(empleado) = self.listaDeInvitados().contains(empleado)
+    method aprenderLenguaje(lenguaje) {
+        lenguajesConoce.add(lenguaje)
+    }
     
-    // Permitir ingreso solo si está invitado
-    method ingresarInvitado(empleado) {
-        if (self.estaInvitado(empleado)) {
-            if (!asistentes.contains(empleado)) {
-                asistentes.add(empleado)
-                // Crear registro de asistencia
-                const registro = new RegistroAsistencia(empleado = empleado, mesa = empleado.numeroMesa())
-                registroAsistencia.add(registro)
-            }
-        } else {
-            self.error("La persona no está en la lista de invitados")
+    method esCopado()
+
+    method mesaAsignada() = self.cantidadLenguajesModernos()
+
+    method cantidadLenguajesModernos() = lenguajesModernos.count{leng=>lenguajesConoce.contains(leng)}
+
+    method regalo() = self.cantidadLenguajesModernos() * 1000
+}
+
+class Desarrollador inherits Persona{
+
+    override method estaInvitado() = lenguajesConoce.contains("wollok") || lenguajesAntiguos.any{leng=>lenguajesConoce.contains(leng) }
+
+    override method esCopado() = 
+        lenguajesAntiguos.any{leng=>lenguajesConoce.contains(leng) } &&
+        lenguajesModernos.any{leng=>lenguajesConoce.contains(leng) }
+}
+
+class Infra inherits Persona{
+
+    var property experiencia
+
+    override method estaInvitado() = lenguajesConoce.size() >= 5
+
+    override method esCopado() = experiencia > 10
+}
+
+class Jefe inherits Persona{
+    
+    var property aCargo = []
+
+    override method estaInvitado() = lenguajesAntiguos.any{leng=>lenguajesConoce.contains(leng)} && self.tieneACargoCopados()
+
+    method tieneACargoCopados() = aCargo.all{uno=>uno.esCopado()}
+
+    method tomarACargo(persona) {
+        aCargo.add(persona)
+    }
+    
+    override method mesaAsignada() = 99
+
+    override method esCopado() = false // Los jefes no se consideran copados automáticamente
+
+    override method regalo() = super() + (aCargo.size()*1000)
+
+}
+
+class Fiesta{
+    var property organizador
+
+    method costoFiesta() = 200000 + (self.presentes().size() *5000)
+
+    var property presentes = []
+    method asistieron(asistente){ 
+        if(self.listaInvitados().contains(asistente)){  
+            presentes.add(asistente)
+        }
+        else{
+            throw new NoEstaInvitado(message=" No esta invitado")
         }
     }
-    
-    // Calcular costo total de la fiesta
-    method costoTotal() = costoFijo + (5000 * asistentes.size())
-    
-    // Calcular total de regalos recibidos
-    method totalRegalos() = asistentes.sum { empleado => empleado.montoRegalo() }
-    
-    // Obtener registro de asistencia
-    method obtenerRegistroAsistencia() = registroAsistencia
-    
-    // PUNTO 1: Registrar asistencia de una persona (verificando que esté invitada)
-    method registrarAsistencia(empleado) {
-        self.ingresarInvitado(empleado)  // Ya verifica que esté invitado
-    }
-    
-    // PUNTO 2: Calcular balance de la fiesta (regalos - costo)
-    method balanceFiesta() = self.totalRegalos() - self.costoTotal()
-    
-    // PUNTO 3: Saber si la fiesta fue un éxito
-    method fueExito() = self.balanceFiesta() > 0 && self.todosLosInvitadosAsistieron()
-    
-    method todosLosInvitadosAsistieron() = 
-        self.listaDeInvitados().all { invitado => asistentes.contains(invitado) }
-    
-    // PUNTO 4: Mesa con más asistentes
+    method listaInvitados() = organizador.listaInvitados()
 
-    //otra forma igual pero sin tantos variables intermedias
-    /*method mesaConMasAsistentes() = 
-        registroAsistencia.map { registro => registro.mesa() }.asSet().max { mesa => self.cantidadAsistentesEnMesa(mesa) }
-    */
+    method balance() = presentes.sum{un=>un.regalo()} - self.costoFiesta()
+
+    method fiestaExitosa() = self.balance() > 0 && self.listaInvitados().all{invitado=>presentes.contains(invitado)}
 
     method mesaConMasAsistentes() {
-        const mesas = registroAsistencia.map { registro => registro.mesa() }
+        const mesas = presentes.map{uno=>uno.mesaAsignada()}
         const mesasUnicas = mesas.asSet()
-        return mesasUnicas.max { mesa => self.cantidadAsistentesEnMesa(mesa) }
+        return mesasUnicas.max{ unaMesa=>self.cantidadAsistentesPorMesa(unaMesa)} 
     }
-    
-    method cantidadAsistentesEnMesa(numeroMesa) = 
-        registroAsistencia.count { registro => registro.mesa() == numeroMesa }
+
+    // method mesaConMasAsistentes() = 
+    // presentes.map{uno=>uno.mesaAsignada()}.asSet().max{unaMesa=>self.cantidadAsistentesPorMesa(unaMesa)}    
+
+    method cantidadAsistentesPorMesa(mesa) = presentes.count{unPresente=>unPresente.mesaAsignada() == mesa}
 }
-
-// Clase para el registro de asistencia
-class RegistroAsistencia {
-    const property empleado
-    const property mesa
-}
-
-/*
-¿Podría tener un jefe a su cargo a otro jefe? ¿Qué cambios implicaría hacer en la solución
- para contemplar dicho caso? ¿Qué situaciones se deberían evitar?
-
-// Podría generar dependencias circulares en genteCopada()
-method genteCopada() = aCargo.all { p => p.esCopado() }
-
-⚠️ Situaciones que se deberían evitar:
-1. Ciclos en la jerarquía
-Jefe A a cargo de Jefe B
-Jefe B a cargo de Jefe A
-Resultado: Dependencia circular infinita
-
-*/
