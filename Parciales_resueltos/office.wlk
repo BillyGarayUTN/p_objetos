@@ -8,7 +8,7 @@ class NoHayPlata inherits Exception {
 
 class Sucursal {
   var property empleados = []
-  const presupuesto = 1320
+  const presupuesto
   
   method esViable() = empleados.sum({ un => un.sueldo() }) <= presupuesto
   
@@ -37,6 +37,7 @@ class Empleado {
   var property sucursal
   var property antiguedad
   var property cargo
+  const personalidad
   
   method cambiarCargo(nuevoCargo) {
     cargo = nuevoCargo
@@ -45,10 +46,38 @@ class Empleado {
   method sueldo() = cargo.sueldoBase(self) + (100 * antiguedad)
   
   method colegas() = sucursal.empleados().size() - 1
+  
+  method motivacion() = personalidad.nivelMotivacion(self).min(100).max(0)
+}
+
+class Competitiva {
+  method nivelMotivacion(
+    empleado
+  ) = 100 - (10 * empleado.sucursal().empleados().count(
+    { un => un.sueldo() > empleado.sueldo() }
+  )).max(0)
+}
+
+class Sociable {
+  method nivelMotivacion(empleado) = 15 * empleado.colegas().min(100)
+}
+
+class Indiferente {
+  const valorFijo
+  
+  method nivelMotivacion(empleado) = valorFijo
+}
+
+class Compleja {
+  var property motivaciones = []
+  
+  method nivelMotivacion(empleado) = motivaciones.sum(
+    { un => un.nivelMotivacion(empleado) }
+  ) / motivaciones.size()
 }
 
 class Cargo {
-  var horasTrabajadasPorDia
+  var property horasTrabajadasPorDia
   
   method initialize() {
     if (!horasTrabajadasPorDia.between(4, 8)) {
@@ -70,7 +99,7 @@ class Recepcionista inherits Cargo {
 }
 
 class Pasante inherits Cargo {
-  var diasDeEstudio
+  var property diasDeEstudio
   
   override method diasLaborables() = super() - diasDeEstudio
   

@@ -1,103 +1,122 @@
 class NoEstaInvitado inherits Exception{}
 
-const lenguajesModernos = ["wollok", "kotlin", "typescript"]
-const lenguajesAntiguos = ["cobol", "smalltalk", "pascal", "fortran"]
+const lengAntiguo = ["wollok","cpp","java"]
 
+const lengModerno = ["ruby","python"]
 
-class Organizador{
-    var property empresa
+class Empleado {
+    const property lengConoce = []
 
-    method listaInvitados() = empresa.empleados().filter{uno=>uno.estaInvitado()}
-}
-
-object empresa{
-    var property empleados = []
-}
-class Persona{
-
-    var property lenguajesConoce = []
-    
-    method estaInvitado() = self.esCopado()
-    
-    method aprenderLenguaje(lenguaje) {
-        lenguajesConoce.add(lenguaje)
+    method aprendeLeng(lenguaje){
+        lengConoce.add(lenguaje)
     }
     
-    method esCopado()
+    method conoceLengAntiguo() = lengAntiguo.any({ un => lengConoce.contains(un) })
 
-    method mesaAsignada() = self.cantidadLenguajesModernos()
+    method conoceLengModerno() = lengModerno.any({ un => lengConoce.contains(un) })
 
-    method cantidadLenguajesModernos() = lenguajesModernos.count{leng=>lenguajesConoce.contains(leng)}
+    // Template Method: La lógica general de invitación
+    // "Además, cualquier persona copada también está invitada" se ve en el || self.esCopado()
+    method estaInvitado() = self.cumpleRequisitoDeInvitacion() || self.esCopado()
 
-    method regalo() = self.cantidadLenguajesModernos() * 1000
+    // Métodos abstractos/hooks que deben implementar las subclases
+    method cumpleRequisitoDeInvitacion() 
+    method esCopado() = false // Por defecto no son copados salvo que la subclase diga lo contrario
+
+    method numeroMesa() = self.lengModernoConoce()
+
+    method lengModernoConoce() = lengModerno.filter{ un=>lengConoce.contains(un)}.size() 
+
+    method regalo() = 1000 * self.lengModernoConoce()
 }
 
-class Desarrollador inherits Persona{
+class Desarrollador inherits Empleado {
+    override method cumpleRequisitoDeInvitacion() = 
+        lengConoce.contains("wollok") || self.conoceLengAntiguo()
 
-    override method estaInvitado() = lenguajesConoce.contains("wollok") || lenguajesAntiguos.any{leng=>lenguajesConoce.contains(leng) }
-
-    override method esCopado() = 
-        lenguajesAntiguos.any{leng=>lenguajesConoce.contains(leng) } &&
-        lenguajesModernos.any{leng=>lenguajesConoce.contains(leng) }
+    override method esCopado() = self.conoceLengAntiguo() && self.conoceLengModerno()
 }
 
-class Infra inherits Persona{
+class Infra inherits Empleado {
+    const experiencia
 
-    var property experiencia
-
-    override method estaInvitado() = lenguajesConoce.size() >= 5
+    override method cumpleRequisitoDeInvitacion() = lengConoce.size() >= 5
 
     override method esCopado() = experiencia > 10
 }
 
-class Jefe inherits Persona{
-    
-    var property aCargo = []
+class Jefe inherits Empleado {
+    const property aCargo = []
 
-    override method estaInvitado() = lenguajesAntiguos.any{leng=>lenguajesConoce.contains(leng)} && self.tieneACargoCopados()
-
-    method tieneACargoCopados() = aCargo.all{uno=>uno.esCopado()}
-
-    method tomarACargo(persona) {
-        aCargo.add(persona)
+    method tomarGente(empleado) {
+        aCargo.add(empleado)
     }
+
+    override method cumpleRequisitoDeInvitacion() = self.conoceLengAntiguo() && self.aCargoCopados()
+
+    method aCargoCopados() = aCargo.all({ un => un.esCopado() })
     
-    override method mesaAsignada() = 99
+    // Jefe no sobreescribe esCopado(), asique usa el false del padre (no se define copado para Jefe)
 
-    override method esCopado() = false // Los jefes no se consideran copados automáticamente
+    override method numeroMesa() = 99
 
-    override method regalo() = super() + (aCargo.size()*1000)
-
+    override method regalo() = super() + (1000*aCargo.size()) 
 }
+
+class Empresa {
+    const property empleados = []
+}
+
+class Organizador{
+    var property empresa 
+
+    method listaInvitados() = 
+        empresa.empleados().filter{un=>un.estaInvitado()}
+}
+
+
+// segunda parte
 
 class Fiesta{
     var property organizador
 
-    method costoFiesta() = 200000 + (self.presentes().size() *5000)
+    var property mesas = []
 
-    var property presentes = []
-    method asistieron(asistente){ 
-        if(self.listaInvitados().contains(asistente)){  
-            presentes.add(asistente)
+    const costoFijo = 200000
+
+    var property asistentes = []
+
+    method costoFiesta() = costoFijo + (5000 * asistentes.size() )
+
+    method registrar(persona) {
+        if( !organizador.listaInvitados().contains(persona) ){
+            throw new NoEstaInvitado(message="no esta invitado")
         }
-        else{
-            throw new NoEstaInvitado(message=" No esta invitado")
-        }
-    }
-    method listaInvitados() = organizador.listaInvitados()
 
-    method balance() = presentes.sum{un=>un.regalo()} - self.costoFiesta()
-
-    method fiestaExitosa() = self.balance() > 0 && self.listaInvitados().all{invitado=>presentes.contains(invitado)}
-
-    method mesaConMasAsistentes() {
-        const mesas = presentes.map{uno=>uno.mesaAsignada()}
-        const mesasUnicas = mesas.asSet()
-        return mesasUnicas.max{ unaMesa=>self.cantidadAsistentesPorMesa(unaMesa)} 
+        asistentes.add(persona)
+        self.asignarMesa(persona)
     }
 
-    // method mesaConMasAsistentes() = 
-    // presentes.map{uno=>uno.mesaAsignada()}.asSet().max{unaMesa=>self.cantidadAsistentesPorMesa(unaMesa)}    
+    method asignarMesa(persona){
+        //persona.numeroMEsa() devuelve el numero de mesa que le corresponde
+        const numeroMesa = persona.numeroMesa()
 
-    method cantidadAsistentesPorMesa(mesa) = presentes.count{unPresente=>unPresente.mesaAsignada() == mesa}
+        if( !mesas.any({ unaMesa => unaMesa.numeroMesa() == numeroMesa }) ){
+            const mesa = new Mesa(numeroMesa = numeroMesa)
+            mesas.add(mesa)
+        }
+        const laMesa = mesas.find({ unaMesa => unaMesa.numeroMesa() == numeroMesa }) 
+        laMesa.asistenteEnMesa().add(persona)
+    }
+
+    method balance() = asistentes.sum{un=>un.regalo()}  - self.costoFiesta()
+
+    method fiestaExitosa() = self.balance() > 0 &&  (organizador.listaInvitados().size() == asistentes.size())
+    // compara conjuntos:  organizador.listaInvitados().all{ i => asistentes.contains(i) }               
+    method mesaMasAsistentes() = mesas.max{un=>un.asistenteEnMesa().size()}
+} 
+
+class Mesa{
+    var property numeroMesa
+    var property asistenteEnMesa = []
 }
